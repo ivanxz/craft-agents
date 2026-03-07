@@ -1,0 +1,23 @@
+{
+  "name": "@craft-agent/channel-feishu",
+  "version": "0.1.0",
+  "description": "Feishu/Lark channel adapter for Craft Agent",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "start": "bun run src/main.ts"
+  },
+  "dependencies": {
+    "@craft-agent/channel-adapter": "workspace:*",
+    "@craft-agent/shared": "workspace:*",
+    "@craft-agent/server-core": "workspace:*",
+    "@larksuiteoapi/node-sdk": "^1.30.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "@types/node": "^22.0.0",
+    "@types/bun": "latest"
+  }
+}
