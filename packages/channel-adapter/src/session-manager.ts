@@ -31,6 +31,13 @@ interface PendingRequest {
   timeout: ReturnType<typeof setTimeout>;
 }
 
+interface MessageQueueItem {
+  message: string;
+  onEvent: (event: ChannelAgentEvent) => void | Promise<void>;
+  resolve: () => void;
+  reject: (error: Error) => void;
+}
+
 /**
  * 映射的会话
  */
@@ -52,6 +59,12 @@ export interface MappedSession {
 
   /** RPC 客户端 */
   client: ChannelRpcClient;
+
+  /** 消息队列（确保同一会话的消息按顺序处理） */
+  messageQueue: MessageQueueItem[];
+
+  /** 是否正在处理消息 */
+  isProcessing: boolean;
 }
 
 /**
@@ -375,6 +388,8 @@ export class ChannelSessionManager {
       channelConversationId,
       lastActivity: Date.now(),
       client,
+      messageQueue: [],
+      isProcessing: false,
     };
 
     this.sessions.set(key, session);
@@ -418,6 +433,9 @@ export class ChannelSessionManager {
   /**
    * 发送消息并处理流式响应
    *
+   * 使用消息队列确保同一会话的消息按顺序处理。
+   * 如果多人同时发送消息，它们会被排队依次处理。
+   *
    * @param session 映射的会话
    * @param message 消息内容
    * @param onEvent 事件回调
@@ -430,6 +448,56 @@ export class ChannelSessionManager {
     // 更新活动时间
     session.lastActivity = Date.now();
 
+    // 将消息加入队列
+    return new Promise((resolve, reject) => {
+      session.messageQueue.push({ message, onEvent, resolve, reject });
+
+      // 如果当前没有在处理消息，开始处理队列
+      if (!session.isProcessing) {
+        this.processMessageQueue(session);
+      }
+    });
+  }
+
+  /**
+   * 处理消息队列
+   *
+   * 按顺序处理队列中的消息，确保同一会话的消息不会并发执行
+   */
+  private async processMessageQueue(session: MappedSession): Promise<void> {
+    // 如果队列为空或已经在处理，直接返回
+    if (session.messageQueue.length === 0) {
+      session.isProcessing = false;
+      return;
+    }
+
+    // 标记为正在处理
+    session.isProcessing = true;
+
+    // 取出队列头部的消息
+    const item = session.messageQueue.shift()!;
+    const { message, onEvent, resolve, reject } = item;
+
+    try {
+      // 实际发送消息
+      await this.sendMessageInternal(session, message, onEvent);
+      resolve();
+    } catch (error) {
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
+
+    // 处理下一条消息（递归，但不是真正的递归因为用了 async）
+    await this.processMessageQueue(session);
+  }
+
+  /**
+   * 内部方法：实际发送消息并处理流式响应
+   */
+  private async sendMessageInternal(
+    session: MappedSession,
+    message: string,
+    onEvent: (event: ChannelAgentEvent) => void | Promise<void>
+  ): Promise<void> {
     // 用于跟踪完成状态
     let completed = false;
     let resolveCompletion: () => void;
