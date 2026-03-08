@@ -640,6 +640,17 @@ app.whenReady().then(async () => {
 
       // Start periodic model refresh after auth is initialized
       modelRefreshService!.startAll()
+
+      // Initialize IM Channel Manager and start enabled channels
+      try {
+        const { initImChannelManager, getImChannelManager } = await import('./im-channel-manager')
+        const imManager = initImChannelManager(rpcHost, wsServer.port, localToken)
+        imManager.setRpcServer(server)
+        await imManager.startEnabledChannels()
+        mainLog.info('[im-channels] IM Channel Manager initialized')
+      } catch (err) {
+        mainLog.warn('[im-channels] Failed to initialize IM Channel Manager (non-critical):', err instanceof Error ? err.message : err)
+      }
     }
 
     // Create initial windows (restores from saved state or opens first workspace)

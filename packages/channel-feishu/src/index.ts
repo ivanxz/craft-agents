@@ -542,7 +542,9 @@ export class FeishuAdapter implements ChannelAdapter {
 
     let session;
     try {
-      session = await this.sessionManager.getOrCreateSession(ctx.senderId, ctx.chatId);
+      // Use chatId as both userId and conversationId to ensure all messages
+      // in the same Feishu chat share the same session, regardless of sender
+      session = await this.sessionManager.getOrCreateSession(ctx.chatId, ctx.chatId);
     } catch (err: any) {
       console.error(`[Feishu] Failed to create session: ${err.message}`);
       await this.sendTextMessage(ctx.chatId, `❌ 无法连接到 Craft Agent 服务器。请确保服务器正在运行。\n\n错误: ${err.message}`);

@@ -158,6 +158,23 @@ export const PreferencesIcon = ({ className }: IconProps) => (
   </svg>
 )
 
+/** Chat bubble icon for IM channels */
+export const ImChannelsIcon = ({ className }: IconProps) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20C10.16 20 8.47 19.39 7.1 18.36L6.46 17.88L5.66 18.09L4 18.53L4.96 17.13L5.48 16.35L5.1 15.5C4.39 14.08 4 12.58 4 12ZM8 14C8 14.55 8.45 15 9 15H15C15.55 15 16 14.55 16 14C16 13.45 15.55 13 15 13H9C8.45 13 8 13.45 8 14ZM9 11C9.55 11 10 10.55 10 10C10 9.45 9.55 9 9 9C8.45 9 8 9.45 8 10C8 10.55 8.45 11 9 11ZM16 10C16 10.55 15.55 11 15 11C14.45 11 14 10.55 14 10C14 9.45 14.45 9 15 9C15.55 9 16 9.45 16 10Z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
 /**
  * Map of settings subpage IDs to their icon components.
  * Used by both AppMenu and SettingsNavigator for consistent icons.
@@ -165,6 +182,7 @@ export const PreferencesIcon = ({ className }: IconProps) => (
 export const SETTINGS_ICONS: Record<SettingsSubpage, React.ComponentType<IconProps>> = {
   app: AppSettingsIcon,
   ai: AiSettingsIcon,
+  'im-channels': ImChannelsIcon,
   appearance: AppearanceIcon,
   input: InputIcon,
   workspace: WorkspaceIcon,

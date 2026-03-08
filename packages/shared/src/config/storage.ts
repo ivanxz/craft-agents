@@ -42,11 +42,17 @@ import {
   getModelProvider,
 } from './models.ts';
 
+// Import IM channel types
+import type { ImChannelConfig } from './im-channels.ts';
+
 // Config stored in JSON file (credentials stored in encrypted file, not here)
 export interface StoredConfig {
   // LLM Connections (authoritative source for auth and model config)
   llmConnections?: LlmConnection[];
   defaultLlmConnection?: string;  // Slug of default connection for new sessions
+
+  // IM Channels (Feishu, Discord, etc.)
+  imChannels?: ImChannelConfig[];
 
   workspaces: Workspace[];
   activeWorkspaceId: string | null;

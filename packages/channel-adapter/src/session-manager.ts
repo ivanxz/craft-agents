@@ -302,19 +302,30 @@ export class ChannelSessionManager {
    *
    * @param channelUserId 通道用户 ID
    * @param channelConversationId 通道对话 ID
+   * @param forceNew 强制创建新会话（当旧会话失效时）
    * @returns 映射的会话
    */
   async getOrCreateSession(
     channelUserId: string,
-    channelConversationId: string
+    channelConversationId: string,
+    forceNew = false
   ): Promise<MappedSession> {
     const key = this.getSessionKey(channelUserId, channelConversationId);
 
-    // 检查现有会话
-    let session = this.sessions.get(key);
-    if (session) {
-      session.lastActivity = Date.now();
-      return session;
+    // 检查现有会话（除非强制创建新的）
+    if (!forceNew) {
+      let session = this.sessions.get(key);
+      if (session) {
+        session.lastActivity = Date.now();
+        return session;
+      }
+    }
+
+    // 清理旧会话（如果存在）
+    const oldSession = this.sessions.get(key);
+    if (oldSession) {
+      this.sessions.delete(key);
+      oldSession.client.destroy();
     }
 
     // 创建新的 RPC 客户端
@@ -330,19 +341,35 @@ export class ChannelSessionManager {
     // 切换到目标工作区
     await client.invoke('window:switchWorkspace', this.config.defaultWorkspaceId);
 
-    // 创建新会话
-    const sessionResult = await client.invoke(
-      'sessions:create',
-      this.config.defaultWorkspaceId,
-      {
-        permissionMode: this.config.defaultPermissionMode,
-        name: `Channel: ${channelUserId}`,
+    // 生成会话名称（使用 conversationId 作为唯一标识）
+    const sessionName = `Channel: ${channelConversationId}`;
+
+    // 尝试查找已存在的会话（除非强制创建新的）
+    let sessionId: string | null = null;
+    if (!forceNew) {
+      sessionId = await this.findExistingSession(client, sessionName);
+      if (sessionId) {
+        console.log(`[ChannelSessionManager] Found existing session: ${sessionId} for ${channelConversationId}`);
       }
-    ) as { id: string };
+    }
+
+    // 如果没找到，创建新会话
+    if (!sessionId) {
+      const sessionResult = await client.invoke(
+        'sessions:create',
+        this.config.defaultWorkspaceId,
+        {
+          permissionMode: this.config.defaultPermissionMode,
+          name: sessionName,
+        }
+      ) as { id: string };
+      sessionId = sessionResult.id;
+      console.log(`[ChannelSessionManager] Created new session: ${sessionId} for ${channelConversationId}`);
+    }
 
     // 保存会话
-    session = {
-      sessionId: sessionResult.id,
+    const session: MappedSession = {
+      sessionId,
       workspaceId: this.config.defaultWorkspaceId,
       channelUserId,
       channelConversationId,
@@ -352,6 +379,40 @@ export class ChannelSessionManager {
 
     this.sessions.set(key, session);
     return session;
+  }
+
+  /**
+   * 查找已存在的会话
+   *
+   * @param client RPC 客户端
+   * @param sessionName 会话名称
+   * @returns 会话 ID，如果没找到返回 null
+   */
+  private async findExistingSession(client: ChannelRpcClient, sessionName: string): Promise<string | null> {
+    try {
+      const sessions = await client.invoke('sessions:get') as Array<{ id: string; name?: string }>;
+      if (Array.isArray(sessions)) {
+        const existing = sessions.find(s => s.name === sessionName);
+        return existing?.id || null;
+      }
+    } catch (error) {
+      console.log(`[ChannelSessionManager] Failed to list sessions: ${error}`);
+    }
+    return null;
+  }
+
+  /**
+   * 删除会话并重新创建
+   *
+   * @param channelUserId 通道用户 ID
+   * @param channelConversationId 通道对话 ID
+   * @returns 新的映射会话
+   */
+  async recreateSession(
+    channelUserId: string,
+    channelConversationId: string
+  ): Promise<MappedSession> {
+    return this.getOrCreateSession(channelUserId, channelConversationId, true);
   }
 
   /**
@@ -410,10 +471,61 @@ export class ChannelSessionManager {
 
       await completionPromise;
       clearTimeout(timeout);
+    } catch (error: any) {
+      // 如果会话不存在，尝试重新创建
+      if (this.isSessionNotFoundError(error)) {
+        console.log(`[ChannelSessionManager] Session ${session.sessionId} not found, recreating...`);
+
+        // 重新创建会话
+        const newSession = await this.recreateSession(
+          session.channelUserId,
+          session.channelConversationId
+        );
+
+        // 更新 session 引用
+        Object.assign(session, newSession);
+
+        // 重新订阅事件
+        unsubscribe();
+        const newUnsubscribe = session.client.on('session:event', eventHandler);
+
+        // 重试发送消息
+        try {
+          await session.client.invoke('sessions:sendMessage', session.sessionId, message);
+
+          // 等待完成（带超时）
+          const retryTimeout = setTimeout(() => {
+            if (!completed) {
+              resolveCompletion();
+            }
+          }, 300000);
+
+          await completionPromise;
+          clearTimeout(retryTimeout);
+        } finally {
+          newUnsubscribe();
+        }
+      } else {
+        throw error;
+      }
     } finally {
       // 取消订阅
       unsubscribe();
     }
+  }
+
+  /**
+   * 检查是否是会话不存在错误
+   */
+  private isSessionNotFoundError(error: Error & { code?: string }): boolean {
+    const message = error.message?.toLowerCase() || '';
+    const code = error.code?.toLowerCase() || '';
+    return (
+      message.includes('not found') ||
+      message.includes('does not exist') ||
+      code === 'session_not_found' ||
+      code === 'not_found'
+    );
   }
 
   /**

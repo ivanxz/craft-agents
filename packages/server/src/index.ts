@@ -57,7 +57,7 @@ const instance = await (async () => {
     return await startHeadlessServer<SessionManager, HandlerDeps>({
       bundledAssetsRoot,
       tls,
-      applyPlatformToSubsystems: (platform) => {
+      applyPlatformToSubsystems: (platform) => {                   
         setFetcherPlatform(platform)
         setSessionPlatform(platform)
         setSessionRuntimeHooks({

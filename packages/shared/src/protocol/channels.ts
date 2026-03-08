@@ -321,6 +321,19 @@ export const RPC_CHANNELS = {
     GET_LAST_EXECUTED: 'automations:getLastExecuted',
     CHANGED: 'automations:changed',
   },
+  imChannels: {
+    LIST: 'imChannels:list',
+    GET: 'imChannels:get',
+    CREATE: 'imChannels:create',
+    UPDATE: 'imChannels:update',
+    DELETE: 'imChannels:delete',
+    START: 'imChannels:start',
+    STOP: 'imChannels:stop',
+    TEST: 'imChannels:test',
+    GET_CREDENTIALS: 'imChannels:getCredentials',
+    SAVE_CREDENTIALS: 'imChannels:saveCredentials',
+    CHANGED: 'imChannels:changed',
+  },
 } as const
 
 // IPC_CHANNELS compat alias removed — all consumers now use RPC_CHANNELS

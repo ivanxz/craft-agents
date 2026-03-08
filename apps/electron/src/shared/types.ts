@@ -63,6 +63,10 @@ export type { LoadedSkill, SkillMetadata };
 import type { LlmConnection, LlmConnectionWithStatus, LlmAuthType, LlmProviderType } from '@craft-agent/shared/config';
 export type { LlmConnection, LlmConnectionWithStatus, LlmAuthType, LlmProviderType };
 
+// IM channel types
+import type { ImChannelConfig, FeishuCredentials, DiscordCredentials, ImChannelType } from '@craft-agent/shared/config';
+export type { ImChannelConfig, FeishuCredentials, DiscordCredentials, ImChannelType };
+
 // =============================================================================
 // GUI-only types (not used by server/handler code)
 // =============================================================================
@@ -556,6 +560,19 @@ export interface ElectronAPI {
 
   // Automations change listener
   onAutomationsChanged(callback: (workspaceId: string) => void): () => void
+
+  // IM Channels (Feishu, Discord bots)
+  listImChannels(): Promise<{ channels: ImChannelConfig[] }>
+  getImChannel(channelId: string): Promise<{ channel: ImChannelConfig | null }>
+  createImChannel(type: ImChannelType, name: string, defaultWorkspaceId: string): Promise<{ success: boolean; channel?: ImChannelConfig; error?: string }>
+  updateImChannel(channelId: string, updates: Partial<Omit<ImChannelConfig, 'id' | 'createdAt'>>): Promise<{ success: boolean; channel?: ImChannelConfig; error?: string }>
+  deleteImChannel(channelId: string): Promise<{ success: boolean; error?: string }>
+  startImChannel(channelId: string): Promise<{ success: boolean; error?: string }>
+  stopImChannel(channelId: string): Promise<{ success: boolean; error?: string }>
+  testImChannel(channelId: string): Promise<{ success: boolean; error?: string }>
+  getImChannelCredentials(channelId: string): Promise<{ success: boolean; credentials?: FeishuCredentials | DiscordCredentials; error?: string }>
+  saveImChannelCredentials(channelId: string, credentials: FeishuCredentials | DiscordCredentials): Promise<{ success: boolean; error?: string }>
+  onImChannelsChanged(callback: () => void): () => void
 }
 
 // =============================================================================

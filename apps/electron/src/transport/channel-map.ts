@@ -331,4 +331,17 @@ export const CHANNEL_MAP = {
   getAutomationHistory: invoke(RPC_CHANNELS.automations.GET_HISTORY),
   getAutomationLastExecuted: invoke(RPC_CHANNELS.automations.GET_LAST_EXECUTED),
   onAutomationsChanged: listener(RPC_CHANNELS.automations.CHANGED),
+
+  // IM Channels
+  listImChannels: invoke(RPC_CHANNELS.imChannels.LIST),
+  getImChannel: invoke(RPC_CHANNELS.imChannels.GET),
+  createImChannel: invoke(RPC_CHANNELS.imChannels.CREATE),
+  updateImChannel: invoke(RPC_CHANNELS.imChannels.UPDATE),
+  deleteImChannel: invoke(RPC_CHANNELS.imChannels.DELETE),
+  startImChannel: invoke(RPC_CHANNELS.imChannels.START),
+  stopImChannel: invoke(RPC_CHANNELS.imChannels.STOP),
+  testImChannel: invoke(RPC_CHANNELS.imChannels.TEST),
+  getImChannelCredentials: invoke(RPC_CHANNELS.imChannels.GET_CREDENTIALS),
+  saveImChannelCredentials: invoke(RPC_CHANNELS.imChannels.SAVE_CREDENTIALS),
+  onImChannelsChanged: listener(RPC_CHANNELS.imChannels.CHANGED),
 } satisfies ChannelMap
